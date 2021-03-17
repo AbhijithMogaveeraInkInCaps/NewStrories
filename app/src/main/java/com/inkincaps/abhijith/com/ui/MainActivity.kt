@@ -189,6 +189,9 @@ class MainActivity : AppCompatActivity(), OnTextLayerCallback {
                 )
             )
             findViewById<ImageView>(R.id.bg_image).visibility = View.GONE
+            this.findViewById<PlayerView>(R.id.exoplayerView).apply {
+                visibility = View.GONE
+            }
         }
         return super.onOptionsItemSelected(item)
     }
@@ -237,10 +240,14 @@ class MainActivity : AppCompatActivity(), OnTextLayerCallback {
                 }
             }
         }
+
         if (resultCode == RESULT_OK) {
             if (requestCode == SELECT_PICTURE) {
                 if (data != null) {
-                    this.findViewById<PlayerView>(R.id.exoplayerView).visibility = View.INVISIBLE
+                    this.findViewById<PlayerView>(R.id.exoplayerView).apply {
+                        player?.stop()
+                        this.visibility = View.GONE
+                    }
                     findViewById<ImageView>(R.id.bg_image).visibility = View.VISIBLE
                     options = Options.IMAGE
                     findViewById<View>(R.id.activity_main).setBackgroundColor(Color.BLACK)
@@ -251,8 +258,10 @@ class MainActivity : AppCompatActivity(), OnTextLayerCallback {
 
         if(resultCode == RESULT_OK){
             if(requestCode == SELECT_VIDEO){
-                this.findViewById<ImageView>(R.id.bg_image).visibility = View.INVISIBLE
-                this.findViewById<PlayerView>(R.id.exoplayerView).visibility = View.VISIBLE
+                this.findViewById<ImageView>(R.id.bg_image).visibility = View.GONE
+                this.findViewById<PlayerView>(R.id.exoplayerView).apply {
+                    visibility = View.VISIBLE
+                }
                 val x = SimpleExoPlayer.Builder(this).build().apply {
                     val uri =
                         setMediaItem(MediaItem.fromUri(data!!.data!!))
@@ -303,7 +312,7 @@ fun FragmentActivity.startImagePickingActivity(): Int {
 }
 
 const val SELECT_PICTURE = 1
-const val SELECT_VIDEO = 1
+const val SELECT_VIDEO = 2
 
 sealed class Options {
     object IMAGE : Options()
