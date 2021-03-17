@@ -8,10 +8,11 @@
     android:layout_height="match_parent"
     tools:context=".com.ui.MainActivity">
 
-    <com.inkincaps.abhijith.com.widget.ZoomableImageView
+    <ImageView
+        android:id="@+id/bg_image"
         android:layout_width="match_parent"
-        android:src="@drawable/pic"
         android:layout_height="match_parent"/>
+
     <com.inkincaps.abhijith.com.widget.MotionView
         android:id="@+id/main_motion_view"
         android:layout_width="match_parent"
