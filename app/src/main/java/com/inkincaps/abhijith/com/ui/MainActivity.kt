@@ -190,6 +190,7 @@ class MainActivity : AppCompatActivity(), OnTextLayerCallback {
             )
             findViewById<ImageView>(R.id.bg_image).visibility = View.GONE
             this.findViewById<PlayerView>(R.id.exoplayerView).apply {
+                this.player?.stop()
                 visibility = View.GONE
             }
         }
@@ -258,7 +259,9 @@ class MainActivity : AppCompatActivity(), OnTextLayerCallback {
 
         if(resultCode == RESULT_OK){
             if(requestCode == SELECT_VIDEO){
+                options = Options.VIDEO
                 this.findViewById<ImageView>(R.id.bg_image).visibility = View.GONE
+                findViewById<View>(R.id.activity_main).setBackgroundColor(Color.BLACK)
                 this.findViewById<PlayerView>(R.id.exoplayerView).apply {
                     visibility = View.VISIBLE
                 }
