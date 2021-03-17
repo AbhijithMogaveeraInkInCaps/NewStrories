@@ -14,6 +14,12 @@ import androidx.fragment.app.FragmentActivity
 import com.flask.colorpicker.BuildConfig
 import com.flask.colorpicker.ColorPickerView
 import com.flask.colorpicker.builder.ColorPickerDialogBuilder
+import com.google.android.exoplayer2.MediaItem
+import com.google.android.exoplayer2.SimpleExoPlayer
+import com.google.android.exoplayer2.source.ExtractorMediaSource
+import com.google.android.exoplayer2.source.MediaSource
+import com.google.android.exoplayer2.ui.PlayerView
+import com.google.android.exoplayer2.upstream.RawResourceDataSource
 import com.inkincaps.abhijith.R
 import com.inkincaps.abhijith.com.ui.TextEditorDialogFragment.OnTextLayerCallback
 import com.inkincaps.abhijith.com.ui.adapter.FontsAdapter
@@ -27,6 +33,7 @@ import com.inkincaps.abhijith.com.widget.entity.ImageEntity
 import com.inkincaps.abhijith.com.widget.entity.MotionEntity
 import com.inkincaps.abhijith.com.widget.entity.TextEntity
 import kotlin.random.Random
+
 
 class MainActivity : AppCompatActivity(), OnTextLayerCallback {
     private var motionView: MotionView? = null
@@ -56,6 +63,7 @@ class MainActivity : AppCompatActivity(), OnTextLayerCallback {
         textEntityEditPanel = findViewById(R.id.main_motion_text_entity_edit_panel)
         motionView!!.setMotionViewCallback(motionViewCallback)
         initTextEntitiesListeners()
+
     }
 
     private fun addSticker(stickerResId: Int) {
@@ -163,9 +171,23 @@ class MainActivity : AppCompatActivity(), OnTextLayerCallback {
         } else if (item.itemId == R.id.image) {
             startImagePickingActivity()
         } else if (item.itemId == R.id.video) {
+            val intent = Intent()
+            intent.type = "video/*"
+            intent.action = Intent.ACTION_GET_CONTENT
+            startActivityForResult(
+                Intent.createChooser(intent, "Select Video"),
+                SELECT_VIDEO
+            )
         } else if (item.itemId == R.id.color) {
             options = Options.COLOR
-            findViewById<View>(R.id.activity_main).setBackgroundColor(Color.rgb(Random.nextInt(0, 255), Random.nextInt(0, 255), Random.nextInt(0, 255)))
+            findViewById<View>(R.id.activity_main).setBackgroundColor(
+                Color.rgb(
+                    Random.nextInt(
+                        0,
+                        255
+                    ), Random.nextInt(0, 255), Random.nextInt(0, 255)
+                )
+            )
             findViewById<ImageView>(R.id.bg_image).visibility = View.GONE
         }
         return super.onOptionsItemSelected(item)
@@ -173,8 +195,10 @@ class MainActivity : AppCompatActivity(), OnTextLayerCallback {
 
     protected fun addTextSticker() {
         val textLayer = createTextLayer()
-        val textEntity = TextEntity(textLayer, motionView!!.width,
-                                    motionView!!.height, fontProvider!!)
+        val textEntity = TextEntity(
+            textLayer, motionView!!.width,
+            motionView!!.height, fontProvider!!
+        )
         motionView!!.addEntityAndPosition(textEntity)
 
         // move text sticker up so that its not hidden under keyboard
@@ -206,7 +230,6 @@ class MainActivity : AppCompatActivity(), OnTextLayerCallback {
         if (resultCode == RESULT_OK) {
             if (requestCode == SELECT_STICKER_REQUEST_CODE) {
                 if (data != null) {
-                    findViewById<ImageView>(R.id.bg_image).visibility = View.VISIBLE
                     val stickerId = data.getIntExtra(StickerSelectActivity.EXTRA_STICKER_ID, 0)
                     if (stickerId != 0) {
                         addSticker(stickerId)
@@ -217,10 +240,26 @@ class MainActivity : AppCompatActivity(), OnTextLayerCallback {
         if (resultCode == RESULT_OK) {
             if (requestCode == SELECT_PICTURE) {
                 if (data != null) {
+                    this.findViewById<PlayerView>(R.id.exoplayerView).visibility = View.INVISIBLE
+                    findViewById<ImageView>(R.id.bg_image).visibility = View.VISIBLE
                     options = Options.IMAGE
                     findViewById<View>(R.id.activity_main).setBackgroundColor(Color.BLACK)
                     (findViewById<View>(R.id.bg_image) as ImageView).setImageURI(data.data)
                 }
+            }
+        }
+
+        if(resultCode == RESULT_OK){
+            if(requestCode == SELECT_VIDEO){
+                this.findViewById<ImageView>(R.id.bg_image).visibility = View.INVISIBLE
+                this.findViewById<PlayerView>(R.id.exoplayerView).visibility = View.VISIBLE
+                val x = SimpleExoPlayer.Builder(this).build().apply {
+                    val uri =
+                        setMediaItem(MediaItem.fromUri(data!!.data!!))
+                    prepare()
+                    playWhenReady = true
+                }
+                this.findViewById<PlayerView>(R.id.exoplayerView).player = x
             }
         }
     }
@@ -254,13 +293,17 @@ object IntentCollection {
 }
 
 fun FragmentActivity.startImagePickingActivity(): Int {
-    startActivityForResult(Intent.createChooser(
+    startActivityForResult(
+        Intent.createChooser(
             IntentCollection.getImagePickingIntent(),
-            "Select Picture"), SELECT_PICTURE)
+            "Select Picture"
+        ), SELECT_PICTURE
+    )
     return SELECT_PICTURE
 }
 
 const val SELECT_PICTURE = 1
+const val SELECT_VIDEO = 1
 
 sealed class Options {
     object IMAGE : Options()
