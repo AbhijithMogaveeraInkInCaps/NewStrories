@@ -32,4 +32,10 @@
         android:icon="@drawable/ic_color"
         android:title="color"
         app:showAsAction="ifRoom" />
+
+    <item
+        android:id="@+id/save"
+        android:icon="@drawable/ic_save"
+        android:title="save status"
+        app:showAsAction="ifRoom" />
 </menu>

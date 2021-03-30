@@ -1,26 +1,34 @@
 package com.inkincaps.abhijith.com.ui
 
+import android.Manifest
 import android.content.Intent
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
+import android.net.Uri
 import android.os.Bundle
+import android.os.Environment
+import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.widget.ImageView
+import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.net.toFile
 import androidx.fragment.app.FragmentActivity
 import com.flask.colorpicker.BuildConfig
 import com.flask.colorpicker.ColorPickerView
 import com.flask.colorpicker.builder.ColorPickerDialogBuilder
 import com.google.android.exoplayer2.MediaItem
 import com.google.android.exoplayer2.SimpleExoPlayer
-import com.google.android.exoplayer2.source.ExtractorMediaSource
-import com.google.android.exoplayer2.source.MediaSource
 import com.google.android.exoplayer2.ui.PlayerView
-import com.google.android.exoplayer2.upstream.RawResourceDataSource
 import com.inkincaps.abhijith.R
+import com.inkincaps.abhijith.com.FileUtil
+import com.inkincaps.abhijith.com.getScreenShot
+import com.inkincaps.abhijith.com.permission.ShortenMultiplePermissionListener
+import com.inkincaps.abhijith.com.toNineIstoSixteenAspectFile
 import com.inkincaps.abhijith.com.ui.TextEditorDialogFragment.OnTextLayerCallback
 import com.inkincaps.abhijith.com.ui.adapter.FontsAdapter
 import com.inkincaps.abhijith.com.utils.FontProvider
@@ -32,6 +40,20 @@ import com.inkincaps.abhijith.com.widget.MotionView.MotionViewCallback
 import com.inkincaps.abhijith.com.widget.entity.ImageEntity
 import com.inkincaps.abhijith.com.widget.entity.MotionEntity
 import com.inkincaps.abhijith.com.widget.entity.TextEntity
+import com.karumi.dexter.Dexter
+import com.karumi.dexter.MultiplePermissionsReport
+import id.zelory.compressor.Compressor
+import id.zelory.compressor.constraint.*
+import id.zelory.compressor.saveBitmap
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
+import java.io.File
+import java.io.FileNotFoundException
+import java.io.FileOutputStream
+import java.io.IOException
+import java.text.SimpleDateFormat
+import java.util.*
 import kotlin.random.Random
 
 
@@ -58,6 +80,7 @@ class MainActivity : AppCompatActivity(), OnTextLayerCallback {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        requestRuntimePermission()
         fontProvider = FontProvider(resources)
         motionView = findViewById<View>(R.id.main_motion_view) as MotionView
         textEntityEditPanel = findViewById(R.id.main_motion_text_entity_edit_panel)
@@ -171,15 +194,20 @@ class MainActivity : AppCompatActivity(), OnTextLayerCallback {
         } else if (item.itemId == R.id.image) {
             startImagePickingActivity()
         } else if (item.itemId == R.id.video) {
+
             val intent = Intent()
             intent.type = "video/*"
             intent.action = Intent.ACTION_GET_CONTENT
+
             startActivityForResult(
                 Intent.createChooser(intent, "Select Video"),
                 SELECT_VIDEO
             )
+
         } else if (item.itemId == R.id.color) {
+
             options = Options.COLOR
+
             findViewById<View>(R.id.activity_main).setBackgroundColor(
                 Color.rgb(
                     Random.nextInt(
@@ -188,11 +216,16 @@ class MainActivity : AppCompatActivity(), OnTextLayerCallback {
                     ), Random.nextInt(0, 255), Random.nextInt(0, 255)
                 )
             )
+
             findViewById<ImageView>(R.id.bg_image).visibility = View.GONE
+
             this.findViewById<PlayerView>(R.id.exoplayerView).apply {
                 this.player?.stop()
                 visibility = View.GONE
             }
+
+        }else if(item.itemId == R.id.save){
+            motionView?.thumbnailImage?.let { storeImage(it) }
         }
         return super.onOptionsItemSelected(item)
     }
@@ -228,6 +261,7 @@ class MainActivity : AppCompatActivity(), OnTextLayerCallback {
         return textLayer
     }
 
+    lateinit var imageUri: Uri
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
 
@@ -253,6 +287,7 @@ class MainActivity : AppCompatActivity(), OnTextLayerCallback {
                     options = Options.IMAGE
                     findViewById<View>(R.id.activity_main).setBackgroundColor(Color.BLACK)
                     (findViewById<View>(R.id.bg_image) as ImageView).setImageURI(data.data)
+                    imageUri = data.data!!
                 }
             }
         }
@@ -290,6 +325,95 @@ class MainActivity : AppCompatActivity(), OnTextLayerCallback {
 
     companion object {
         const val SELECT_STICKER_REQUEST_CODE = 123
+    }
+
+
+    private fun requestRuntimePermission() {
+        Dexter.withContext(this)
+            .withPermissions(
+                Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO,
+                Manifest.permission.READ_EXTERNAL_STORAGE,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE
+            )
+            .withListener(object : ShortenMultiplePermissionListener() {
+                override fun onPermissionsChecked(report: MultiplePermissionsReport) {
+                    if (!report.areAllPermissionsGranted()) {
+                        finish()
+                    }
+                }
+            })
+            .check()
+    }
+
+    private fun storeImage(image: Bitmap) {
+        image.toNineIstoSixteenAspectFile(this){
+            Toast.makeText(this, it.absolutePath, Toast.LENGTH_SHORT).show()
+        }
+
+        findViewById<ImageView>(R.id.bg_image).getScreenShot(fillWithBlack = true).toNineIstoSixteenAspectFile(this){
+
+        }
+
+        /*   val pictureFile: File = getOutputMediaFile()!!
+           try {
+               val fos = FileOutputStream(pictureFile)
+               findViewById<ImageView>(R.id.bg_image).getScreenShot(fillWithBlack = true).compress(Bitmap.CompressFormat.PNG, 90, fos)
+               fos.close()
+               Log.e("ABHIIII","compressedImageFile.absolutePath")
+
+               GlobalScope.launch(Dispatchers.IO) {
+                   val compressedImageFile = Compressor.compress(this@MainActivity, pictureFile) {
+                       resolution(540, 960)
+                       quality(80)
+                       destination(File(Environment.getExternalStorageDirectory()
+                           .toString() + "/Android/data/"
+                               + applicationContext.packageName
+                               + "/Files/abhi.jpeg"))
+                       format(Bitmap.CompressFormat.JPEG)
+                       size(2_097_152) // 2 MB
+                   }
+                   Toast.makeText(
+                       this@MainActivity,
+                       compressedImageFile.absolutePath,
+                       Toast.LENGTH_SHORT
+                   ).show()
+                   Log.e("ABHIIII",compressedImageFile.absolutePath)
+               }
+
+   //            findViewById<ImageView>(R.id.bg_image).visibility = View.VISIBLE
+   //            findViewById<ImageView>(R.id.bg_image).setImageBitmap(image)
+           } catch (e: FileNotFoundException) {
+   //            Log.d(TAG, "File not found: " + e.getMessage())
+           } catch (e: IOException) {
+   //            Log.d(TAG, "Error accessing file: " + e.getMessage())
+           }*/
+    }
+
+    private fun getOutputMediaFile(): File? {
+        // To be safe, you should check that the SDCard is mounted
+        // using Environment.getExternalStorageState() before doing this.
+        val mediaStorageDir: File = File(
+            Environment.getExternalStorageDirectory()
+                .toString() + "/Android/data/"
+                    + applicationContext.packageName
+                    + "/Files"
+        )
+
+        // This location works best if you want the created images to be shared
+        // between applications and persist after your app has been uninstalled.
+
+        // Create the storage directory if it does not exist
+        if (!mediaStorageDir.exists()) {
+            if (!mediaStorageDir.mkdirs()) {
+                return null
+            }
+        }
+        // Create a media file name
+        val timeStamp: String = SimpleDateFormat("ddMMyyyy_HHmm").format(Date())
+        val mediaFile: File
+        val mImageName = "MI_$timeStamp.png"
+        mediaFile = File(mediaStorageDir.path + File.separator + mImageName)
+        return mediaFile
     }
 }
 

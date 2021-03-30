@@ -4,6 +4,7 @@ import android.graphics.Canvas;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.PointF;
+import android.util.Log;
 
 import androidx.annotation.IntRange;
 import androidx.annotation.NonNull;
@@ -57,6 +58,7 @@ public abstract class MotionEntity {
      * NOTE: saved as a field variable in order to avoid creating array in draw()-like methods
      */
     private final float[] destPoints = new float[10]; // x0, y0, x1, y1, x2, y2, x3, y3, x0, y0
+
     /**
      * Initial points of the entity
      * @see #destPoints
@@ -72,6 +74,7 @@ public abstract class MotionEntity {
         this.layer = layer;
         this.canvasWidth = canvasWidth;
         this.canvasHeight = canvasHeight;
+        Log.e("Hello",canvasHeight+" "+canvasWidth);
     }
 
     private boolean isSelected() {

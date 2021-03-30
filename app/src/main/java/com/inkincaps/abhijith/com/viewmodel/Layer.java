@@ -12,14 +12,17 @@ public class Layer {
     private float rotationInDegrees;
 
     private float scale;
+
     /**
      * top left X coordinate, relative to parent canvas
      */
     private float x;
+
     /**
      * top left Y coordinate, relative to parent canvas
      */
     private float y;
+
     /**
      * is layer flipped horizontally (by X-coordinate)
      */
@@ -58,8 +61,10 @@ public class Layer {
     }
 
     public void postTranslate(float dx, float dy) {
-        this.x += dx;
-        this.y += dy;
+        setX(getX()+dx);
+        setY(getY()+dy);
+//        this.x += dx;
+//        this.y += dy;
     }
 
     public void flip() {

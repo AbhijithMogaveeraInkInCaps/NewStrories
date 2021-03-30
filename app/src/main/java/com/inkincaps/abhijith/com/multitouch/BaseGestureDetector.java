@@ -24,6 +24,7 @@ import android.view.MotionEvent;
  *         OF SUCH DAMAGE.
  */
 public abstract class BaseGestureDetector {
+
     /**
      * This value is the threshold ratio between the previous combined pressure
      * and the current combined pressure. When pressure decreases rapidly
